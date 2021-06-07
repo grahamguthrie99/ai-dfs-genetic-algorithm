@@ -1,150 +1,71 @@
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.stats import norm
-from math import floor
-from random import sample
-from sklearn.linear_model import LinearRegression
-    
+import random
 
 class GeneticAlgorithm():
-    def __init__(self, file, population_size, positions, salary_cap, players, fitness_key, generations, util_file):
-        self.file = file
-        self.util = util_file
+    def __init__(self, population_size, generation_count, positions, fitness_key, player_list):
         self.population_size = population_size
-        self.positions = positions #array
-        self.players = players
-        self.salary_cap = salary_cap
-        self.player_dict = self.createPlayerDict()
-        self.population = []
+        self.generation_count = generation_count
+        self.positions = positions 
         self.fitness_key = fitness_key
-        self.generations = generations
-        
-    def createPlayerDict(self):
-        player_dict = dict()
-        for position in self.positions:
-            player_dict[position] =  self.file.loc[self.file['Pos'].str.contains(self.positions[position])]
-        player_dict['util'] = self.util
-        return player_dict
-        
-    def runMainGA(self):
-        self.population = self.createRandomPopulation(self.population_size)  
-        counter = 0
-        while(counter<self.generations):
-            
-            self.sortFitest()
-            print(len(self.population))
-            self.createNextGeneration() 
-            
-            self.population.extend(self.createRandomPopulation(self.population_size - len(self.population)))
-            counter = counter+1
-            print(len(self.population))
-        
-        self.sortFitest()
-        print("*****************")
-        
-    def createRandomPopulation(self, limit):
-        counter = 0
+        self.player_position_table = self.mapPlayersToPosition(player_list)
+
+    def mapPlayersToPosition(self, player_list):
+        position_table = {}
+        for position in self.positions: 
+            if(position != 'Util'):
+                position_table[position] = list(filter(lambda player: position in player['pos'], player_list))
+            else: 
+                position_table['Util'] = player_list
+        return position_table 
+
+    def createLineup(self):
+        lineup = []
+        for position in self.player_position_table.keys():
+            lineup.append(random.choice(self.player_position_table[position]))
+        return lineup
+
+    def validateLineup(self, lineup):
+        all_unique_players = len(list(set([player['name'] for player in lineup]))) == len(lineup)
+        teams_represented = len(list(set([player['team'] for player in lineup]))) > 1
+        salary_under_cap = sum([int(player['salary']) for player in lineup]) < 50000
+        return all_unique_players and teams_represented and salary_under_cap
+
+    def createPopulation(self, limit):
         lineups = []
-        while(counter<limit):
-            lineup = pd.DataFrame()
-            for position in self.player_dict.values():
-                lineup = lineup.append(position.sample(n=1))
-           
-            if(self.verifyLineup(lineup)):
+        while(len(lineups) < limit):
+            lineup = self.createLineup()
+            if(self.validateLineup(lineup)):
                 lineups.append(lineup)
-                counter = counter + 1
         return lineups
 
+    def evaluateFitness(self, lineup):
+        return sum([float(player[self.fitness_key]) for player in lineup])
 
-    def verifyLineup(self, lineup):
-        enough_represented_teams = len(set(lineup['Team'].tolist()))>=2
-        under_salary_cap = lineup['Salary'].sum() <= self.salary_cap
-        all_unique_players = len(set(lineup['Player Name'].tolist())) == self.players
-        if enough_represented_teams and under_salary_cap and all_unique_players:
-            return True
-        else:
-            return False
-    
-    def fitnessFunction(self, lineup):
-        return lineup[self.fitness_key].sum() 
-    
-    def sortFitest(self): 
-        self.population = sorted(self.population,key=lambda lineup: lineup[self.fitness_key].sum(), reverse=True)
-        self.eliminateDuplicates()
-    
-    def eliminateDuplicates(self):
-        unique_lineups = set()
-        unique_population = []
-        for lineup in self.population:
-            lineup_set = set()
-            for player in lineup['Player Name'].tolist():
-                lineup_set.add(player)
-
-            if(not lineup_set.issubset(unique_lineups)):  
-                unique_population.append(lineup)
-                unique_lineups = unique_lineups.union(lineup_set)
-        self.population = unique_population
-        
-            
-    def createNextGeneration(self):
-        selected_population = self.performSelection()
-        children = self.performCrossover(selected_population)
-        new_generation = self.population[:len(self.population)-10]
-        new_generation.extend(children)
-        self.population = new_generation
-    
-    def performSelection(self):
-        selected_population = self.population[:1]
-#         selected_population.extend(sample(self.population[1:5], 3))
-#         selected_population.extend(sample(self.population[10:20], 4))
-        selected_population.extend(sample(self.population, 2))
+    def performSelection(self, population):
+        selected_population = population[:10]
         return selected_population
-    
-    def performCrossover(self, selected_population):
-        children = []
-        parents = selected_population
-        children = self.mate(parents) 
+
+    def createChildren(self, selected_population):
+        parents = [player for lineup in selected_population for player in lineup]
+        master_position_table = self.player_position_table
+        self.player_position_table = self.mapPlayersToPosition(parents)
+        children = self.createPopulation(10)
+        self.player_position_table = master_position_table
         return children
 
-    def mate(self, _parents):
-        parents = pd.concat(sample(_parents, 3))
-        parent_dict = dict()
-        for position in self.positions:
-            parent_dict[position] = parents.loc[parents['Pos'].str.contains(self.positions[position])]
-        util_pos = set(self.util['Pos'].to_list())
-        parent_dict['util'] = parents[parents['Pos'].isin(util_pos)]
-        children = []
-        while(len(children) < 10):
-            child_lineup = _parents[0].append(_parents[1])
-            while(not self.verifyLineup(child_lineup)):
-                child_lineup = pd.DataFrame()
-                for position in parent_dict.values():
-                    child_lineup = child_lineup.append(position.sample(n=1))
-            children.append(child_lineup)
-        return children
+    def run(self):
+        initial_population = self.createPopulation(self.population_size)
+        return self.performGeneration(self.generation_count, initial_population)
     
-    def resetIndicies(self, file):
-        for lineup in file:
-            lineup.reset_index(drop=True, inplace=True)
-        return file
+    def performGeneration(self, generation_count, population):
+        if(generation_count == 0):
+            return population
+        sorted_population = sorted(population, key=lambda lineup: self.evaluateFitness(lineup), reverse=True)
+        print(sum([float(player[self.fitness_key]) for player in sorted_population[0]]))
+        selected_population = self.performSelection(sorted_population)
+        children = self.createChildren(selected_population)
+        random_population = self.createPopulation(len(population) - len(selected_population) - len(children))
+        return self.performGeneration(generation_count-1, selected_population + children + random_population)
 
-    def dropLowScoringLineups(self, file):
-        drop_level = file.groupby(['Lineup Num'])[self.fitness_key].sum().mean() - file.groupby(['Lineup Num'])[self.fitness_key].sum().std()
-       
-        group = file.groupby(['Lineup Num'])
-#         return group.filter(lambda x: x[self.fitness_key].sum() > drop_level)
-        return file
-    
-    def saveBestLineupstoCSV(self, file_name, date):
-        key = np.arange(len(self.resetIndicies(self.population)))
-        file_name = file_name.format(date)
-        new_file = self.dropLowScoringLineups(pd.concat(self.population, keys=key, names=['Lineup Num']))
-        new_file.to_csv(file_name)
-
-    def randomlyCreateLineups(self):
-        self.population = self.createRandomPopulation(self.population_size)
-        
 
 
 
