@@ -1,0 +1,150 @@
+openapi: 3.0.2
+info:
+  title: Genetic Algorithm API
+  contact:
+    name: Graham Guthrie
+    email: bcanvas1ad@gmail.com
+  version: "1.0"
+servers:
+- url: http://localhost/api/v1
+tags:
+- name: Genetic Algorithm API
+  description: Optimize daily fantasy sports lineups based on a pool of players
+paths:
+  /runGeneticAlgorithm:
+    post:
+      tags:
+      - Genentic Algorithm API
+      summary: Optimize daily fantasy sports lineups through the use of a genetic
+        algorithm
+      description: Run genetic optimization algorithm
+      operationId: run_genetic_algorithm
+      requestBody:
+        description: Context schema
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Context'
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LineupList'
+        "500":
+          description: Internal Server Error
+      x-openapi-router-controller: swagger_server.controllers.genentic_algorithm_api_controller
+components:
+  schemas:
+    Player:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Player Id
+          example: 1
+        date:
+          type: string
+          description: Date
+          format: YYYY-MM-DD
+          example: 2021-06-03
+        name:
+          type: string
+          description: Player Name
+          example: Lebron James
+        fn:
+          type: string
+          description: Player First Name
+          example: Lebron
+        ln:
+          type: string
+          description: Player Last Name
+          example: James
+        pos:
+          type: string
+          description: Position
+          example: C
+        inj:
+          type: string
+          description: Injury Status
+          example: O
+        team:
+          type: string
+          description: Team
+          example: LAL
+        salary:
+          type: integer
+          description: Salary
+          example: 7000
+        ppg_proj:
+          type: number
+          description: Projected fantasy points
+          format: float
+          example: 56.26
+        value_proj:
+          type: number
+          description: Projected fantasy value
+          format: float
+          example: 4.25
+      description: Player schema
+      example:
+        date: 2021-06-03
+        ln: James
+        value_proj: 4.25
+        inj: O
+        pos: C
+        ppg_proj: 56.26
+        name: Lebron James
+        fn: Lebron
+        id: 1
+        team: LAL
+        salary: 7000
+    Context:
+      required:
+      - parameters
+      - player_list
+      type: object
+      properties:
+        parameters:
+          $ref: '#/components/schemas/Context_parameters'
+        player_list:
+          type: array
+          description: List of players
+          items:
+            $ref: '#/components/schemas/Player'
+      description: Context for running genetic algorithm
+    LineupList:
+      type: array
+      description: List of lineups
+      items:
+        $ref: '#/components/schemas/Player'
+    Context_parameters:
+      required:
+      - generation_count
+      - platform
+      - population_size
+      - sport
+      type: object
+      properties:
+        platform:
+          type: string
+          description: Daily fantasy sports competition platform
+          example: Draftkings
+        sport:
+          type: string
+          description: Sport
+          example: NBA
+        population_size:
+          maximum: 50
+          minimum: 10
+          type: integer
+          description: Number of lineups to be generated (10-50)
+        generation_count:
+          maximum: 500
+          minimum: 10
+          type: integer
+          description: "Number of times genetic algorithm will run (10-1000), more\
+            \ generations = more time"
+      description: Configuration parameters
+
