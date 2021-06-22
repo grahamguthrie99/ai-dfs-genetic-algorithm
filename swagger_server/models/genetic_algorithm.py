@@ -13,18 +13,18 @@ class GeneticAlgorithm():
                     "salary_cap" : 500000
                 },
                 "fanduel" : {
-                    "positions" : ["PG", "PG", "SG", "SG", "SF", "SF", "PF", "PF", "C"], 
+                    "positions" : ["PG1", "PG2", "SG1", "SG2", "SF1", "SF2", "PF1", "PF2", "C"], 
                     "salary_cap" : 600000
 
                 }
             }, 
             "mlb" : {
                 "draftkings": {
-                    "positions" : ["P", "P", "C", "1B", "2B", "3B", "SS", "OF", "OF","OF"], 
+                    "positions" : ["P1", "P2", "C", "1B", "2B", "3B", "SS", "OF1", "OF2","OF3"], 
                     "salary_cap" : 500000
                 },
                 "fanduel" : {
-                    "positions" : ["P", "C/1B", "2B", "SS", "3B", "OF", "OF", "OF", "Util"], 
+                    "positions" : ["P", "C/1B", "2B", "SS", "3B", "OF1", "OF2", "OF3", "Util"], 
                     "salary_cap" : 35000
 
                 }
@@ -40,9 +40,10 @@ class GeneticAlgorithm():
         position_table = {}
         for position in self.configuration['positions']: 
             if(position != 'Util'):
-                position_table[position] = list(filter(lambda player: position in player._pos, player_list))
+                position_table[position] = list(filter(lambda player: player._pos in position or position in player._pos, player_list))
             else: 
                 position_table['Util'] = player_list
+        print(position_table)
         return position_table 
 
     def createLineup(self):
