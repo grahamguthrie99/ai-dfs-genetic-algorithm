@@ -3,7 +3,7 @@ import random
 class GeneticAlgorithm():
     def __init__(self, parameters, player_list):
         self.configuration = self.configure(parameters)
-        self.player_position_table = self.mapPlayersToPosition(player_list)
+        self.player_position_table = self.mapPlayersToPosition(self.normalizeProjectionValues(player_list))
     
     def configure(self, parameters):
         sports = {
@@ -36,6 +36,20 @@ class GeneticAlgorithm():
         params['generation_count'] = parameters.generation_count
         return params
 
+    def normalizeProjectionValues(self, player_list): 
+        positions = list({player._pos for player in player_list})
+        min_max_pos_lookup = {} 
+        for position in positions: 
+            position_min_max = {} 
+            position_list  = list(filter(lambda player: player._pos in position, player_list))
+            position_min_max["min"] = min(float(player._ppg_proj) for player in position_list)
+            position_min_max["max"] = max(float(player._ppg_proj) for player in position_list)
+            min_max_pos_lookup[position] = position_min_max
+        for player in player_list: 
+                player._fitness_score = ( float(player._ppg_proj) - min_max_pos_lookup[player._pos]["min"] ) / (min_max_pos_lookup[player._pos]["max"] - min_max_pos_lookup[player._pos]["min"])
+        return player_list
+        
+
     def mapPlayersToPosition(self, player_list):
         position_table = {}
         for position in self.configuration['positions']: 
@@ -43,7 +57,6 @@ class GeneticAlgorithm():
                 position_table[position] = list(filter(lambda player: player._pos in position or position in player._pos, player_list))
             else: 
                 position_table['Util'] = player_list
-        print(position_table)
         return position_table 
 
     def createLineup(self):
@@ -67,7 +80,7 @@ class GeneticAlgorithm():
         return lineups
 
     def evaluateFitness(self, lineup):
-        return sum([float(player._ppg_proj) for player in lineup])
+        return sum([float(player._fitness_score) for player in lineup])
 
     def performSelection(self, population):
         selected_population = population[:10]

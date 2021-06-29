@@ -51,7 +51,8 @@ class Player(Model):
             'team': str,
             'salary': int,
             'ppg_proj': float,
-            'value_proj': float
+            'value_proj': float, 
+            'fitness_score': float
         }
 
         self.attribute_map = {
@@ -65,7 +66,8 @@ class Player(Model):
             'team': 'team',
             'salary': 'salary',
             'ppg_proj': 'ppg_proj',
-            'value_proj': 'value_proj'
+            'value_proj': 'value_proj', 
+            'fitness_score': "fitness_score"
         }
         self._id = id
         self.__date = _date
@@ -78,6 +80,7 @@ class Player(Model):
         self._salary = salary
         self._ppg_proj = ppg_proj
         self._value_proj = value_proj
+        self._fitness_score = 0
 
     @classmethod
     def from_dict(cls, dikt) -> 'Player':
@@ -342,3 +345,15 @@ class Player(Model):
         """
 
         self._value_proj = value_proj
+
+    @property
+    def fitness_score(self) -> float:
+        return self._fitness_score
+
+    @fitness_score.setter
+    def fitness_score(self, fitness_score: float):
+        self._fitness_score = fitness_score
+
+
+
+
