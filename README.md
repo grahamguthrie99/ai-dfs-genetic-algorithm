@@ -1,4 +1,4 @@
-![Title Image](./ReadMe.png)
+![Title Image](./ai-dfs-genetic-algorithm.png)
 
 # DFSGeneticAlgorithm
 
